@@ -4,6 +4,8 @@ from sklearn.datasets.samples_generator import make_blobs
 import math as mt
 from sklearn import metrics
 import utility as util
+from scipy.spatial import distance_matrix
+from scipy.cluster import hierarchy
 
 class ClusterEvaluation(object):
 
@@ -64,10 +66,11 @@ class HierarchicalAgglomerativeAutoCluster(ClusterEvaluation):
 
     labels = None
     k = None       # number of clusters
+    _X = None
 
     def run(self, X):
-        _X = util.standardize_dataset(X)
-        self.max_k = int(mt.log(len(_X))) + 1
+        self._X = util.standardize_dataset(X)
+        self.max_k = int(mt.log(len(self._X))) + 1
 
         highest_valuation_calinski_harabasz = None
 
@@ -77,7 +80,7 @@ class HierarchicalAgglomerativeAutoCluster(ClusterEvaluation):
 
             n = k * 3  # Number of time the k-means algorithm will be run with different centroid seeds.
             agglom = AgglomerativeClustering(n_clusters = k, linkage = 'complete')
-            agglom.fit(_X)
+            agglom.fit(self._X)
 
             super().evaluatte(k, X, agglom.labels_)
 
@@ -91,6 +94,11 @@ class HierarchicalAgglomerativeAutoCluster(ClusterEvaluation):
                 highest_valuation_calinski_harabasz = self.evaluation_calinski_harabasz[k]
 
         return (self.best_k, self.labels)
+
+    def showHierarchicalDiagram(self, orientation = 'top'):
+        dist_matrix = distance_matrix(self._X, self._X)
+        Z = hierarchy.linkage(dist_matrix, 'complete')
+        dendro = hierarchy.dendrogram(Z, labels = self._X, leaf_rotation=0, leaf_font_size =12, orientation = orientation)
 
 
 class DBSCANAutoCluster(ClusterEvaluation):
@@ -147,7 +155,7 @@ class DBSCANAutoCluster(ClusterEvaluation):
 
 if __name__ == '__main__':
     # generate 2 dimensions data set
-    X, y = make_blobs(n_samples=1000, n_features=2, centers=[[-1, -1], [0, 0], [1, 1], [2, 2]],
+    X, y = make_blobs(n_samples=100, n_features=2, centers=[[-1, -1], [0, 0], [1, 1], [2, 2]],
                       cluster_std=[0.4, 0.2, 0.2, 0.2],
                       random_state=9)
 
@@ -156,11 +164,12 @@ if __name__ == '__main__':
 
     module = KMeansAutoCluster()
     best_k, k_means_labels = module.run(X)
-    module.showClusterNumberVsEvaluation()
+    #module.showClusterNumberVsEvaluation()
 
     module2 = HierarchicalAgglomerativeAutoCluster()
     best_k, labels = module2.run(X)
-    module2.showClusterNumberVsEvaluation()
+    #module2.showClusterNumberVsEvaluation()
+    module2.showHierarchicalDiagram()
 
     #plt.plot(list(module2.evaluation_silhouette_score.keys()), list(module2.evaluation_silhouette_score.values()))
     #plt.show()
